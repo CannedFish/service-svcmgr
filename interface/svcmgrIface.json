@@ -1,0 +1,26 @@
+{
+  "service": "svcmgr",
+  "remote": "false",
+  "interfaces": [
+    {
+      "name": "addService",
+      "in": ["String", "Object"],
+      "show": "l"
+    },
+    {
+      "name": "listService",
+      "in": [],
+      "show": "l"
+    },
+    {
+      "name": "checkService",
+      "in": ["String", "String"],
+      "show": "l"
+    },
+    {
+      "name": "getService",
+      "in": ["String"],
+      "show": "l"
+    }
+  ]
+}

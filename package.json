@@ -15,5 +15,8 @@
     "service"
   ],
   "author": "CannedFish",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "webde-rpc": "~0.1.0"
+  }
 }
