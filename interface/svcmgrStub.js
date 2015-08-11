@@ -47,13 +47,22 @@ var initObj = {
       });
     },
     listService: function(callback) {
-      svcmgr.listService();
+      svcmgr.listService(function(err, list) {
+        if(err) return callback({err: err});
+        callback({ret: list});
+      });
     },
-    checkService: function(String, String, callback) {
-      svcmgr.checkService();
+    checkService: function(svcName, callback) {
+      svcmgr.checkService(svcName, function(err, path) {
+        if(err) return callback({err: err});
+        callback({ret: path});
+      });
     },
-    getService: function(String, callback) {
-      svcmgr.getService();
+    getService: function(svcName, callback) {
+      svcmgr.getService(svcName, function(err, path) {
+        if(err) return callback({err: err});
+        callback({ret: path});
+      });
     }
   }
 }

@@ -1,35 +1,48 @@
 var child = require('child_process'),
+    util = require('util'),
     noop = function() {};
 
 function __svcNew(svcName, svcDes) {
   var childProc = child.fork(svcDes.path, svcDes.args);
   childProc.on('error', function(err) {
-    // TODO: Log this error, handle error based on error type
+    // TODO: Log this error, handle error based on error type, start up error
   }).on('exit', function(code, signal) {
     // TODO: Log informations
-    __svcDelete(svcName, (code == null ? false : true));
+    svcmgr._svcList[svcName].status = 'stopped';
+    __svcDelete(svcName);
   });
   svcmgr._svcList[svcName] = svcDes;
   svcmgr._svcList[svcName].proc = childProc;
+  svcmgr._svcList[svcName].proc.name = svcName;
+  svcmgr._svcList[svcName].status = 'running';
 }
 
-function __svcDelete(svcName, killProc) {
-  if(svcmgr._svcList[svcName]) {
-    if(killProc) {
-      // kill this svc process
-      svcmgr._svcList[svcName].proc.kill('SIGKILL');
-    }
+function __svcTerm(svcName) {
+  if(svcmgr._svcList[svcName] && svcmgr._svcList[svcName].status == 'running') {
+    // kill this svc process
+    svcmgr._svcList[svcName].proc.kill('SIGKILL');
+  }
+}
+
+function __svcDelete(svcName) {
+  if(svcmgr._svcList[svcName] && svcmgr._svcList[svcName].status == 'stopped') {
     svcmgr._svcList[svcName] = null;
     delete svcmgr._svcList[svcName];
   }
 }
 
 function __broadcastMsg(msg) {
-  // TODO: broadcast a msg to all svc
+  // broadcast a msg to all svc
+  var list = svcmgr._svcList;
+  for(var key in list) {
+    list[key].proc.send(msg);
+  }
 }
 
 function __sendMsg(svcName, msg) {
-  // TODO: send a msg to a dedicated service like commdaemon etc.
+  // send a msg to a dedicated service like commdaemon etc.
+  var svc = svcmgr._svcList[svcName];
+  svc.proc.send(msg);
 }
 
 function SvcMgr() {
@@ -64,8 +77,18 @@ SvcMgr.prototype.checkService = function(svcName, callback) {
   this.getService(svcName, callback);
 }
 
+// TODO: add an argument
 SvcMgr.prototype.getService = function(svcName, callback) {
   var cb = callback || noop;
+  if(typeof this._svcList[svcName] != 'undefined') {
+    if(this._svcList[svcName].proc.status != 'stopped') {
+      cb(null, this._svcList[svcName].path + '/interface/' + svcName + 'Proxy');
+    } else {
+      cb('Service stopped!');
+    }
+  } else {
+    cb('Service not found!');
+  }
 }
 
 var svcmgr = null,
