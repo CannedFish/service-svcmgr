@@ -19,7 +19,7 @@
     },
     {
       "name": "getService",
-      "in": ["String"],
+      "in": ["String", "String"],
       "show": "l"
     }
   ]

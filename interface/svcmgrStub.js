@@ -34,6 +34,7 @@ var initObj = {
     {
       "name": "getService",
       "in": [
+        "String",
         "String"
       ],
       "show": "l"
@@ -52,14 +53,14 @@ var initObj = {
         callback({ret: list});
       });
     },
-    checkService: function(svcName, callback) {
-      svcmgr.checkService(svcName, function(err, path) {
+    checkService: function(svcName, addr, callback) {
+      svcmgr.checkService(svcName, addr, function(err, path) {
         if(err) return callback({err: err});
         callback({ret: path});
       });
     },
-    getService: function(svcName, callback) {
-      svcmgr.getService(svcName, function(err, path) {
+    getService: function(svcName, addr, callback) {
+      svcmgr.getService(svcName, addr, function(err, path) {
         if(err) return callback({err: err});
         callback({ret: path});
       });

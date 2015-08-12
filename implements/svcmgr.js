@@ -1,6 +1,39 @@
 var child = require('child_process'),
     util = require('util'),
+    INNER_PROXY_PATH = '/interface/proxy',
     noop = function() {};
+
+function __bind2Remote(mode, svcName, svcProxy) {
+  svcmgr.getService('commdaemon', 'local', function(err, path) {
+    if(err) return util.log(err);
+    var cd = require(path).getProxy(),
+        arg = [];
+    if(mode == 0) { // a service aquires actively.
+      arg[svcName] = svcProxy;
+    } else { // bind services start up before commdaemon
+      var list = svcmgr._svcList,
+          arg = [];
+      for(var key in svcmgr) {
+        if(list[key].remote) {
+          arg[key] = list[key].path + INNER_PROXY_PATH;
+        }
+      }
+    }
+    cd.register(arg, function(ret) {
+      if(ret.err) util.log('Fail to bind on commdaemon: ' + ret.err);
+    });
+  });
+}
+
+function __unbindFromRemote(svcName) {
+  svcmgr.getService('commdaemon', 'local', function(err, path) {
+    if(err) return util.log(err);
+    var cd = require(path).getProxy();
+    cd.unregister(svcName, function(ret) {
+      if(ret.err) util.log('Fail to unbind from commdaemon: ' + ret.err);
+    });
+  });
+}
 
 function __svcNew(svcName, svcDes) {
   var childProc = child.fork(svcDes.path, svcDes.args);
@@ -15,6 +48,12 @@ function __svcNew(svcName, svcDes) {
   svcmgr._svcList[svcName].proc = childProc;
   svcmgr._svcList[svcName].proc.name = svcName;
   svcmgr._svcList[svcName].status = 'running';
+  if(svcName == 'commdaemon') {
+    __bind2Remote(1);
+  } else {
+    if(svcDes.remote)
+      __bind2Remote(0, svcName, svcDes.path + INNER_PROXY_PATH);
+  }
 }
 
 function __svcTerm(svcName) {
@@ -26,6 +65,7 @@ function __svcTerm(svcName) {
 
 function __svcDelete(svcName) {
   if(svcmgr._svcList[svcName] && svcmgr._svcList[svcName].status == 'stopped') {
+    __unbindFromRemote(svcName);
     svcmgr._svcList[svcName] = null;
     delete svcmgr._svcList[svcName];
   }
@@ -43,6 +83,14 @@ function __sendMsg(svcName, msg) {
   // send a msg to a dedicated service like commdaemon etc.
   var svc = svcmgr._svcList[svcName];
   svc.proc.send(msg);
+}
+
+function __status(svcName) {
+  var svc = svcmgr._svcList[svcName];
+  if(typeof svc !== 'undefined') {
+    return svc.status;
+  }
+  return null;
 }
 
 function SvcMgr() {
@@ -71,23 +119,28 @@ SvcMgr.prototype.listService = function(callback) {
   cb(null, list);
 }
 
-SvcMgr.prototype.checkService = function(svcName, callback) {
+SvcMgr.prototype.checkService = function(svcName, addr, callback) {
   // var cb = callback || noop;
   // TODO: some permission checking
-  this.getService(svcName, callback);
+  this.getService.apply(this, arguments);
 }
 
-// TODO: add an argument
-SvcMgr.prototype.getService = function(svcName, callback) {
+SvcMgr.prototype.getService = function(svcName, addr, callback) {
   var cb = callback || noop;
-  if(typeof this._svcList[svcName] != 'undefined') {
-    if(this._svcList[svcName].proc.status != 'stopped') {
-      cb(null, this._svcList[svcName].path + '/interface/' + svcName + 'Proxy');
+  console.log(svcName, 'status:', __status(svcName), arguments);
+  if(__status(svcName) == 'running') {
+    var ret = this._svcList[svcName].path + INNER_PROXY_PATH;
+    if(addr != 'local') {
+      if(__status('commdaemon') != 'running') {
+        cb('commdaemon is not running!');
+      } else {
+        cb(null, ret + 'remote');
+      }
     } else {
-      cb('Service stopped!');
+      cb(null, ret);
     }
   } else {
-    cb('Service not found!');
+    cb(svcName + ' is not running!');
   }
 }
 
