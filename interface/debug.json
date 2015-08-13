@@ -1,0 +1,22 @@
+{
+  "service": "svcmgr",
+  "path": "/nodejs/webde/svcmgr/debug",
+  "remote": "false",
+  "interfaces": [
+    {
+      "name": "list",
+      "in": [],
+      "show": "l"
+    },
+    {
+      "name": "stop",
+      "in": ["Array"],
+      "show": "l"
+    },
+    {
+      "name": "restart",
+      "in": ["Array"],
+      "show": "l"
+    }
+  ]
+}

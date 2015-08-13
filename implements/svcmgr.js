@@ -1,5 +1,7 @@
 var child = require('child_process'),
     util = require('util'),
+    fs = require('fs'),
+    LOG_PATH = process.env.HOME + '/.custard/servlog/',
     INNER_PROXY_PATH = '/interface/proxy',
     noop = function() {};
 
@@ -36,11 +38,17 @@ function __unbindFromRemote(svcName) {
 }
 
 function __svcNew(svcName, svcDes) {
-  var childProc = child.fork(svcDes.path, svcDes.args);
+  // TODO: remove later
+  // var childProc = child.fork(svcDes.path, svcDes.args);
+  var childProc = child.spawn('node', [svcDes.path].concat(svcDes.args), {
+    stdio: ['ignore', fs.openSync(LOG_PATH + svcName + '.log', 'w'), 'ignore']
+  });
   childProc.on('error', function(err) {
     // TODO: Log this error, handle error based on error type, start up error
+    util.log('Child Process Error:' + err);
   }).on('exit', function(code, signal) {
     // TODO: Log informations
+    util.log(svcName + ' exited with code ' + code + ' by ' + signal);
     svcmgr._svcList[svcName].status = 'stopped';
     __svcDelete(svcName);
   });
@@ -57,9 +65,11 @@ function __svcNew(svcName, svcDes) {
 }
 
 function __svcTerm(svcName) {
-  if(svcmgr._svcList[svcName] && svcmgr._svcList[svcName].status == 'running') {
+  if(__status(svcName) == 'running') {
+    var svc = svcmgr._svcList[svcName];
     // kill this svc process
-    svcmgr._svcList[svcName].proc.kill('SIGKILL');
+    svc.proc.kill('SIGINT');
+    svc.status = 'killing';
   }
 }
 
@@ -71,6 +81,14 @@ function __svcDelete(svcName) {
   }
 }
 
+function __svcmgrExit() {
+  for(var svc in svcmgr._svcList) {
+    // TODO: save to restore?
+    __svcTerm(svc);
+  }
+  process.exit(0);
+}
+/* TODO: remove later since now use spawn to replace fork
 function __broadcastMsg(msg) {
   // broadcast a msg to all svc
   var list = svcmgr._svcList;
@@ -84,10 +102,13 @@ function __sendMsg(svcName, msg) {
   var svc = svcmgr._svcList[svcName];
   svc.proc.send(msg);
 }
-
-function __status(svcName) {
+*/
+function __status(svcName, status) {
   var svc = svcmgr._svcList[svcName];
   if(typeof svc !== 'undefined') {
+    if(!status)
+      return svc.status;
+    svc.status = status;
     return svc.status;
   }
   return null;
@@ -95,12 +116,17 @@ function __status(svcName) {
 
 function SvcMgr() {
   this._svcList = [];
+  process.on('exit', function(code) {
+    util.log('Process exit');
+  }).on('uncaughtException', function(err) {
+    util.log('Caught Exception: ' + err);
+  }).on('SIGTERM', __svcmgrExit).on('SIGINT', __svcmgrExit);
 }
 
 SvcMgr.prototype.addService = function(svcName, svcDes, callback) {
   var cb = callback || noop;
   // TODO: notify 'service added'
-  if(typeof this._svcList[svcName] !== 'undefined')
+  if(__status(svcName) == 'running')
     return cb('Service ' + svcName + ' already added!');
   if(typeof svcDes !== 'object')
     return cb('Argument 1 must be an object!');
@@ -114,7 +140,8 @@ SvcMgr.prototype.listService = function(callback) {
   var cb = callback || noop,
       list = [];
   for(var key in this._svcList) {
-    list.push(key);
+    if(__status(key) == 'running')
+      list.push(key);
   }
   cb(null, list);
 }
@@ -157,3 +184,63 @@ exports.setStub = function(stub_) {
   stub = stub_;
 }
 
+function __stop(nameList, callback) {
+  if(svcmgr == null)
+    return console.error('Error: service manager is not running.');
+  var list = svcmgr._svcList,
+      n = nameList.length,
+      res = {},
+      cb = callback || noop;
+  for(var i = 0; i < nameList.length; ++i) {
+    var svc = nameList[i];
+    if(__status(svc) == 'running') {
+      res[svc] = {};
+      res[svc].path = list[svc].path;
+      res[svc].args = list[svc].args;
+      res[svc].remote = list[svc].remote;
+      list[svc].proc.on('exit', function(code, signal) {
+        res[svc].status = 'stopped';
+        if(--n == 0) {
+          cb(null, res);
+        }
+      });
+      __svcTerm(svc);
+    } else {
+      res[svc].status = 'not running';
+      --n;
+    }
+  }
+}
+
+exports.DEBUG = {
+  list: function(callback) {
+    if(svcmgr == null)
+      return console.error('Error: service manager is not running.');
+    svcmgr.listService(callback);
+  },
+  stop: __stop,
+  restart: function(nameList, callback) {
+    if(svcmgr == null)
+      return console.error('Error: service manager is not running.');
+    var cb = callback || noop;
+    __stop(nameList, function(err, ret) {
+      var n = nameList.length,
+          rets = {};
+      for(var i = 0; i < nameList.length; ++i) {
+        var svc = nameList[i];
+        rets[svc] = {};
+        if(ret[svc].status == 'stopped') {
+          svcmgr.addService(svc, ret[svc], function(err) {
+            if(err) rets[svc] = err;
+            else rets[svc].status = 'OK';
+            if(--n == 0)
+              cb(null, rets);
+          });
+        } else {
+          rets[svc].status = ret[svc].status;
+          --n;
+        }
+      }
+    });
+  }
+}
