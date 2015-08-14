@@ -41,7 +41,7 @@ function __svcNew(svcName, svcDes) {
   // TODO: remove later
   // var childProc = child.fork(svcDes.path, svcDes.args);
   var childProc = child.spawn('node', [svcDes.path].concat(svcDes.args), {
-    stdio: ['ignore', fs.openSync(LOG_PATH + svcName + '.log', 'w'), 'ignore']
+    stdio: ['ignore', fs.openSync(LOG_PATH + svcName + '.log', 'a'), 'ignore']
   });
   childProc.on('error', function(err) {
     // TODO: Log this error, handle error based on error type, start up error
@@ -68,7 +68,7 @@ function __svcTerm(svcName) {
   if(__status(svcName) == 'running') {
     var svc = svcmgr._svcList[svcName];
     // kill this svc process
-    svc.proc.kill('SIGINT');
+    svc.proc.kill('SIGTERM');
     svc.status = 'killing';
   }
 }
