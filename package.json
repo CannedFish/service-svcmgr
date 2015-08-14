@@ -1,0 +1,22 @@
+{
+  "name": "svcmgr",
+  "version": "0.1.0",
+  "description": "manage all services",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@124.16.141.145/ibp/service-svcmgr"
+  },
+  "keywords": [
+    "manager",
+    "service"
+  ],
+  "author": "CannedFish",
+  "license": "ISC",
+  "dependencies": {
+    "webde-rpc": "~0.1.0"
+  }
+}
