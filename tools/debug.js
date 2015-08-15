@@ -59,7 +59,7 @@ debug.list(function(ret) {
         console.error('No valid selection!!');
         process.exit(1);
       }
-      if(action == '--stop') {
+      if(action == '--stop' || action == '-s') {
         debug.stop(todo, actionCB);
       } else {
         debug.restart(todo, actionCB);
