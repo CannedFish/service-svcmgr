@@ -6,16 +6,16 @@ var child = require('child_process'),
     noop = function() {};
 
 function __bind2Remote(mode, svcName, svcProxy) {
-  svcmgr.getService('commdaemon', 'local', function(err, path) {
+  svcmgr.getService('nodejs.webde.commdaemon', 'local', function(err, path) {
     if(err) return util.log(err);
     var cd = require(path).getProxy(),
-        arg = [], r = false;
+        arg = {},
+        r = false;
     if(mode == 0) { // a service aquires actively.
       arg[svcName] = svcProxy;
       r = true;
     } else { // bind services start up before commdaemon
-      var list = svcmgr._svcList,
-          arg = [];
+      var list = svcmgr._svcList;
       for(var key in list) {
         if(list[key].remote) {
           r = true;
@@ -33,7 +33,7 @@ function __bind2Remote(mode, svcName, svcProxy) {
 }
 
 function __unbindFromRemote(svcName) {
-  svcmgr.getService('commdaemon', 'local', function(err, path) {
+  svcmgr.getService('nodejs.webde.commdaemon', 'local', function(err, path) {
     if(err) return util.log(err);
     var cd = require(path).getProxy();
     cd.unregister(svcName, function(ret) {
@@ -73,7 +73,7 @@ function __svcNew(svcName, svcDes) {
   svcmgr._svcList[svcName].proc = childProc;
   svcmgr._svcList[svcName].proc.name = svcName;
   svcmgr._svcList[svcName].status = 'running';
-  if(svcName == 'commdaemon') {
+  if(svcName == 'nodejs.webde.commdaemon') {
     __bind2Remote(1);
   } else {
     if(svcDes.remote)
@@ -186,7 +186,7 @@ SvcMgr.prototype.getService = function(svcName, addr, callback) {
   if(__status(svcName) == 'running') {
     var ret = this._svcList[svcName].path + INNER_PROXY_PATH;
     if(addr != 'local') {
-      if(__status('commdaemon') != 'running') {
+      if(__status('nodejs.webde.commdaemon') != 'running') {
         process.nextTick(function() {
           cb('commdaemon is not running!');
         });
