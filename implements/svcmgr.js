@@ -198,7 +198,6 @@ SvcMgr.prototype.checkService = function(svcName, addr, callback) {
 
 SvcMgr.prototype.getService = function(svcName, addr, callback) {
   var cb = callback || noop;
-  // console.log(svcName, 'status:', __status(svcName), arguments);
   if(__status(svcName) == 'running') {
     var ret = this._svcList[svcName].path + INNER_PROXY_PATH;
     if(addr != 'local') {
@@ -285,7 +284,6 @@ exports.DEBUG = {
           rets[svc] = {};
           if(ret[svc].status == 'stopped') {
             svcmgr.addService(svc, ret[svc], function(err) {
-              console.log('after add service:', svc);
               if(err) rets[svc] = err;
               else rets[svc].status = 'OK';
               if(--n == 0) {
