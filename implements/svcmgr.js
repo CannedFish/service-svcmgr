@@ -1,6 +1,8 @@
 var child = require('child_process'),
     util = require('util'),
     fs = require('fs'),
+    os = require('os'),
+    LOCK_PATH = os.tmpDir() + '/.svcmgr.lock',
     LOG_PATH = process.env.HOME + '/.custard/servlog/',
     INNER_PROXY_PATH = '/interface/proxy',
     noop = function() {};
@@ -46,7 +48,7 @@ function __svcNew(svcName, svcDes) {
   // TODO: remove later
   // var childProc = child.fork(svcDes.path, svcDes.args);
   var childProc = child.spawn('node', [svcDes.path].concat(svcDes.args), {
-    stdio: ['ignore', fs.openSync(LOG_PATH + svcName + '.log', 'a'), 'ignore']
+    stdio: ['ignore', fs.openSync(LOG_PATH + svcName.split('.').pop() + '.log', 'a'), 'ignore']
   });
   childProc.on('error', function(err) {
     // TODO: Log this error, handle error based on error type, start up error
@@ -131,9 +133,21 @@ function __status(svcName, status) {
   return null;
 }
 
+function __online() {
+  if(fs.existsSync(LOCK_PATH))
+    throw new Error('The service manager has already started.');
+  fs.writeFileSync(LOCK_PATH, 'lock');
+}
+
+function __offline() {
+  fs.unlinkSync(LOCK_PATH);
+}
+
 function SvcMgr() {
+  __online();
   this._svcList = [];
   process.on('exit', function(code) {
+    __offline();
     util.log('Process exit');
   }).on('uncaughtException', function(err) {
     util.log('Caught Exception: ' + err);
