@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var action = process.argv[2] || '--list',
+var action = process.argv[2],
     debug = require('../interface/debugProxy').getProxy();
 
 debug.list(function(ret) {

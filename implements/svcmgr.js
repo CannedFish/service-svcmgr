@@ -76,7 +76,9 @@ function __svcNew(svcName, svcDes) {
   svcmgr._svcList[svcName].proc.name = svcName;
   svcmgr._svcList[svcName].status = 'running';
   if(svcName == 'nodejs.webde.commdaemon') {
-    __bind2Remote(1);
+    setTimeout(function() {
+      __bind2Remote(1);
+    }, 1000);
   } else {
     if(svcDes.remote)
       __bind2Remote(0, svcName, svcDes.path + INNER_PROXY_PATH);
@@ -249,7 +251,7 @@ function __stop(nameList, callback) {
       res[svc].args = list[svc].args;
       res[svc].remote = list[svc].remote;
       list[svc].proc.on('exit', function(code, signal) {
-        res[svc].status = 'stopped';
+        res[this.name].status = 'stopped';
         if(--n == 0) {
           process.nextTick(function() {
             cb(null, res);
@@ -279,21 +281,24 @@ exports.DEBUG = {
       var n = nameList.length,
           rets = {};
       for(var i = 0; i < nameList.length; ++i) {
-        var svc = nameList[i];
-        rets[svc] = {};
-        if(ret[svc].status == 'stopped') {
-          svcmgr.addService(svc, ret[svc], function(err) {
-            if(err) rets[svc] = err;
-            else rets[svc].status = 'OK';
-            if(--n == 0)
-            process.nextTick(function() {
-              cb(null, rets);
+        (function(svc) {
+          rets[svc] = {};
+          if(ret[svc].status == 'stopped') {
+            svcmgr.addService(svc, ret[svc], function(err) {
+              console.log('after add service:', svc);
+              if(err) rets[svc] = err;
+              else rets[svc].status = 'OK';
+              if(--n == 0) {
+                process.nextTick(function() {
+                  cb(null, rets);
+                });
+              }
             });
-          });
-        } else {
-          rets[svc].status = ret[svc].status;
-          --n;
-        }
+          } else {
+            rets[svc].status = ret[svc].status;
+            --n;
+          }
+        })(nameList[i]);
       }
     });
   }
