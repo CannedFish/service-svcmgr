@@ -52,7 +52,7 @@ function __svcNew(svcName, svcDes) {
   });
   childProc.on('error', function(err) {
     // TODO: Log this error, handle error based on error type, start up error
-    util.log('Child Process Error:' + err);
+    console.log('Child Process Error:', err);
   }).on('exit', function(code, signal) {
     // TODO: Log informations
     util.log(svcName + ' exited with code ' + code + ' by ' + signal);
@@ -95,8 +95,9 @@ function __svcTerm(svcName) {
 }
 
 function __svcDelete(svcName) {
-  if(svcmgr._svcList[svcName] && svcmgr._svcList[svcName].status == 'stopped') {
-    __unbindFromRemote(svcName);
+  if(__status(svcName) == 'stopped') {
+    if(svcmgr._svcList[svcName].remote)
+      __unbindFromRemote(svcName);
     svcmgr._svcList[svcName] = null;
     delete svcmgr._svcList[svcName];
   }
