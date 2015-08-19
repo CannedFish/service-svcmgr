@@ -47,8 +47,9 @@ function __unbindFromRemote(svcName) {
 function __svcNew(svcName, svcDes) {
   // TODO: remove later
   // var childProc = child.fork(svcDes.path, svcDes.args);
-  var childProc = child.spawn('node', [svcDes.path].concat(svcDes.args), {
-    stdio: ['ignore', fs.openSync(LOG_PATH + svcName.split('.').pop() + '.log', 'a'), 'ignore']
+  var path = LOG_PATH + svcName.split('.').pop() + '.log',
+      childProc = child.spawn('node', [svcDes.path].concat(svcDes.args), {
+    stdio: ['ignore', fs.openSync(path, 'a'), fs.openSync(path, 'a')]
   });
   childProc.on('error', function(err) {
     // TODO: Log this error, handle error based on error type, start up error
